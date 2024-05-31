@@ -1,0 +1,3 @@
+#base=js
+
+static/js/main.747600cd.js

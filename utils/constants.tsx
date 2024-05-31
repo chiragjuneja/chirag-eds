@@ -1,0 +1,25 @@
+export const CATALOG_LINK = "catalogPageLink";
+export const MY_LEARNING_LINK = "myLearningPageLink";
+export const COURSE_PAGE_LINK = "coursePageLink";
+export const LP_PAGE_LINK = "lpPageLink";
+export const CERT_PAGE_LINK = "certPageLink";
+export const COURSE_INSTANCE_PAGE_LINK = "ciPageLink";
+export const LP_INSTANCE_PAGE_LINK = "lpiPageLink";
+export const PREVIEW_PAGE_LINK = "courseInstancePreviewPageLink";
+export const PREVIEW_PAGE_SHOW_LINK = "courseInstancePreviewPageShowLink";
+export const SEARCH_TEXT_PARAM = "searchText";
+export const LEADERBOARD_PAGE_LINK = "leaderboardPageLink";
+export const SKILLS_PAGE_LINK = "skillsPageLink";
+export const ALL_BOARDS_PAGE_LINK = "allboardsPageLink";
+export const POSTS_PAGE_LINK = "postsLink";
+export const CATALOG_OVERVIEW_PAGE_LINK = "catalogOverviewPageLink";
+export const CATALOG_GROUP_FILTER_LINK = "catalogGroupFilterLink";
+export const CATALOG_ALL_GROUP_FILTER_LINK = "catalogAllGroupFilterLink";
+export const LO_NOT_FOUND_EVENT_TYPE = "almLoNotFound";
+export const NAVIGATE_TO_LO_EVENT_TYPE = "almNavigateToLoInTeamsApp";
+export const NAVIGATE_TO_LO_INSTANCE_EVENT_TYPE =
+  "almNavigateToLoInstanceInTeamsApp";
+export const MESSAGE = "message";
+export const ALM_DISABLE_BACKGROUND = "almDisableBackground";
+export const ALM_ENABLE_BACKGROUND = "almEnableBackground";
+export const ALM_TEAMS_NAVBAR_ID = "almTeamsNavbar";

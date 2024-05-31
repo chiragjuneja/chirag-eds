@@ -21,6 +21,9 @@
  * @param {string} data.target subject of the checkpoint event,
  * for instance the href of a link, or a search term
  */
+
+import {fetchConfig} from "./fetchConfig.js"; 
+
 function sampleRUM(checkpoint, data = {}) {
   sampleRUM.defer = sampleRUM.defer || [];
   const defer = (fnname) => {
@@ -156,7 +159,236 @@ function init() {
   setup();
   sampleRUM('top');
 
-  window.addEventListener('load', () => sampleRUM('load'));
+  const getRefreshTokenFromCode = async (code) => {
+    try {
+      const config = await fetchConfig();
+      const response = await fetch(`${config.data[0].ALM_URL}/oauth/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': '*/*'
+        },
+        body: new URLSearchParams({
+          client_id: config.data[0].client_id,
+          client_secret: config.data[0].client_secret,
+          code: code
+        })
+      });
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+  
+      const data = await response.json();
+      //console.log(data);
+      document.cookie = `access_token=${data.access_token}; path=/; secure; SameSite=Lax`;
+      document.cookie = `refresh_token=${data.refresh_token}; path=/; secure; SameSite=Lax`;
+  
+      localStorage.setItem('ACCESS_TOKEN_TIMESTAMP', new Date().getTime().toString());
+      localStorage.setItem('USER_ID', data.user_id);
+      localStorage.setItem('ACCOUNT_ID', data.account_id);
+      return data.refresh_token;
+    } catch (error) {
+      console.error('Error getting refresh token from code:', error);
+    }
+  };
+  
+  const getAccessTokenFromRefreshToken = async (token) => {
+    try {
+      const config = await fetchConfig();
+      const response = await fetch(`${config.data[0].ALM_URL}/oauth/token/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': '*/*'
+        },
+        body: new URLSearchParams({
+          client_id: config.data[0].client_id,
+          client_secret: config.data[0].client_secret,
+          refresh_token: token,
+          force: true
+        })
+      });
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+  
+      const data = await response.json();
+      console.log("Access token data : ", data);
+      document.cookie = `access_token=${data.access_token}; path=/; secure; SameSite=Lax`;
+      document.cookie = `refresh_token=${data.refresh_token}; path=/; secure; SameSite=Lax`;
+  
+      localStorage.setItem('ACCESS_TOKEN_TIMESTAMP', new Date().getTime().toString());
+      localStorage.setItem('USER_ID', data.user_id);
+      localStorage.setItem('ACCOUNT_ID', data.account_id);
+      return data.access_token;
+    } catch (error) {
+      document.cookie = 'access_token=; Max-Age=0; path=/; secure; SameSite=Lax';
+      document.cookie = 'refresh_token=; Max-Age=0; path=/; secure; SameSite=Lax';
+  
+      localStorage.removeItem('ACCESS_TOKEN');
+      localStorage.removeItem('REFRESH_TOKEN');
+      localStorage.removeItem('ACCESS_TOKEN_TIMESTAMP');
+      localStorage.removeItem('USER_ID');
+      localStorage.removeItem('ACCOUNT_ID');
+      localStorage.removeItem('CUSTOM_DOMAIN');
+      console.error('Error getting access token from refresh token:', error);
+    }
+  };
+
+ 
+
+
+  const setALMConfig = async (accessToken) => {
+    window.isAlmLocalEnv = true;
+    window.almCDNBaseURL="https://cpcontentsdev.adobe.com/public/alm-non-logged-in";
+    window.ALM = window.ALM || {};
+    window.ALM.ALMConfig = window.ALM.ALMConfig || {};
+    const config = await fetchConfig();
+    window.ALM.ALMConfig = config.data[0];
+    
+    const primeBaseURL = window.ALM.ALMConfig["ALM_URL"];
+    let primeApiURL = "";
+    primeApiURL = `${primeBaseURL}/primeapi/v2/`;
+    window.ALM.ALMConfig["primeApiURL"] = primeApiURL;
+
+    window.ALM.ALMConfig.accessToken = accessToken;
+    window.ALM.ALMConfig.usageType = "aem-es";    
+    window.ALM.getALMConfig = function() {
+    return window.ALM.ALMConfig
+    }
+    window.ALM.isPrimeUserLoggedIn = function() {
+       return 1
+     };
+
+     async function getALMUser() {
+      // if (!isPrimeUserLoggedIn()) {
+      //   window.ALM.storage.removeItem("user");
+      //   return;
+      // }
+      let user = window.ALM.storage.getItem("user");
+      if (user) {
+        return user;
+      }
+      const primeApiURL = window.ALM.ALMConfig.primeApiURL;
+      const userUrl = `${primeApiURL}user?include=account&enforcedFields[account]=extensions`;
+      const headers = {
+        Accept: "application/vnd.api+json",
+        Authorization: `oauth ${accessToken}`,
+      };
+      try {
+        const userResponse = await fetch(`${userUrl}`, {
+          credentials: "include",
+          headers,
+          method: "GET",
+        });
+        if (userResponse && userResponse.status == 200) {
+          user = await userResponse.json();
+          console.log("User data : ", user);
+          const userStr = JSON.stringify(user);
+          window.ALM.storage.setItem("user", userStr, 900);
+          return userStr;
+        } else {
+          console.error("User call failed!!");
+          window.ALM.storage.removeItem("user");
+        }
+      } catch (e) {
+        window.ALM.storage.removeItem("user");
+        throw e;
+      }
+    }
+    window.ALM.getALMUser = getALMUser;
+    const getAccessToken = () => {
+      return accessToken;
+    };
+    window.ALM.getAccessToken = getAccessToken;
+    window.ALM.ALMConfig["frontendResourcesPath"] = "/etc.clientlibs//learning/clientlibs/clientlib-alm/resources";
+    window.ALM.ALMConfig.mountingPoints = {
+			catalogContainer: ".catalog__container",
+			trainingOverviewPage: ".training__page__container",
+			boardsContainer: ".boards__container",
+			boardContainer: ".board__container",
+			badgesContainer: ".badges__container",
+			notificationContainer: ".notification__container",
+			instanceContainer: ".instance__container",
+			profilePageContainer: ".profile__container",
+			authorContainer: ".author__container",
+			userSkillsContainer: ".skills__container",
+			activeFieldsContainer: ".activeFields__container",
+			navigationBarContainer: ".navigationBar__container",
+			mastHeadContainer: ".mastHead__container",
+			categoryBrowserContainer: ".categoryBrowser__container",
+			footerContainer: ".footer__container"
+		};
+    window.ALM.storage = window.localStorage;
+    console.log("ALM Config", window.ALM.ALMConfig);
+  }
+
+  const setPlaceHolder = () => {
+    const catalogDiv = document.createElement('div');
+    catalogDiv.className = "catalog__container";
+    // document.body.appendChild(catalogDiv);
+    document.getElementsByClassName("button-container").item(0).appendChild(catalogDiv);
+  }
+
+  const loadReactDOM = () => {
+    const script = document.createElement('script');
+    script.async = false;
+    script.src = '../myscripts/learning/clientlibs/clientlib-alm/js/main.3560700d.js';
+    document.head.appendChild(script);
+    loadCSS('../styles/main.c4334d51.css');
+  }
+
+  window.addEventListener('load', async () => {
+    sampleRUM('load');
+    let refreshToken;
+    let accessToken;
+    // if in queryparam code exist
+    function getQueryParams(){
+      const params = {};
+      const queryString = window.location.search;
+      const urlParams = new URLSearchParams(queryString);
+
+      urlParams.forEach((value, key) => {
+        params[key] = value;
+      });
+
+      return params;
+    }
+
+    const queryParams = getQueryParams();
+    const code = queryParams['code'];
+    console.log(code);
+
+    // add api calls
+
+    var storedAccessToken = sessionStorage.getItem("ACCESS_TOKEN");
+    console.log("storedAccessToken: " + storedAccessToken);
+
+    if (storedAccessToken === null || storedAccessToken !== "undefined") {
+      await setALMConfig(accessToken);
+      setPlaceHolder();
+      loadReactDOM();
+    } else if (code) {
+      try {
+          refreshToken =  await getRefreshTokenFromCode(code);
+          console.log("Refresh Token:", refreshToken);
+      } catch (error) {
+          console.error('Error getting refresh token from code:', error);
+      }
+      try {
+        accessToken = await getAccessTokenFromRefreshToken(refreshToken);
+        console.log("Access Token:", accessToken);
+        await setALMConfig(accessToken);
+        sessionStorage.setItem("ACCESS_TOKEN", accessToken);
+        setPlaceHolder();
+        loadReactDOM();
+      } catch (error) {
+        console.error('Error getting access token from refreshtoken:', error);
+      }
+    }
+  });
 
   window.addEventListener('unhandledrejection', (event) => {
     sampleRUM('error', { source: event.reason.sourceURL, target: event.reason.line });
@@ -598,6 +830,8 @@ async function loadBlock(block) {
  * Loads JS and CSS for all blocks in a container element.
  * @param {Element} main The container element
  */
+
+//Get component from document which we want and then dynamicaaly make a config file. It should be exportable. 
 async function loadBlocks(main) {
   updateSectionsStatus(main);
   const blocks = [...main.querySelectorAll('div.block')];
