@@ -180,6 +180,6 @@ export default function decorate(block) {
   // Append the button to the block
   var storedAccessToken = sessionStorage.getItem("ACCESS_TOKEN");
   console.log("storedAccessToken from button: " + storedAccessToken);
-  if (storedAccessToken === null || storedAccessToken !== "undefined") {
+  if (storedAccessToken === null || storedAccessToken === "undefined")
     block.append(button);
 }

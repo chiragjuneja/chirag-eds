@@ -366,7 +366,7 @@ function init() {
     var storedAccessToken = sessionStorage.getItem("ACCESS_TOKEN");
     console.log("storedAccessToken: " + storedAccessToken);
 
-    if (storedAccessToken === null || storedAccessToken !== "undefined") {
+    if (storedAccessToken !== null && storedAccessToken !== "undefined") {
       await setALMConfig(accessToken);
       setPlaceHolder();
       loadReactDOM();
