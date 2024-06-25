@@ -97357,6 +97357,8 @@ governing permissions and limitations under the License.
 
     const GetManifestResourcePath = key => {
       //const val = GetManifestFile(key);
+      // Made this change as hash was not being accounted. As and when we will call the new code from ALM components, 
+      // we will uncomment line 97359 and comment 97361
       const val = "almLib/i18n/en_US.json";
       if (!val) {
         return undefined;
@@ -97424,7 +97426,10 @@ Unless required by applicable law or agreed to in writing, software distributed 
 the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
 OF ANY KIND, either express or implied. See the License for the specific language
 governing permissions and limitations under the License.
-*/let test1 = async () => {
+*/
+// EDS Change owing to the reason that EDS doesn't want window.onload as it already has one.
+//  We just need to initiate the function and EDS will pick it(Alakh)
+let test1 = async () => {
       const { locale, messages } = await i18n();// if (getALMObject().isPrimeUserLoggedIn()) {
       //   await getALMUser();
       // }

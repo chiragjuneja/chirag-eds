@@ -163,6 +163,7 @@ export default function decorate(block) {
       // Extract the required fields from the config
       const { ALM_URL: almBaseURL, client_id: clientId, account_id: accountId } = config.data[0];
 
+
       // Construct the authorization URL
       const CP_OAUTH_STATE = 'eds_alm';
       const redirectUri = 'http://localhost:3000';
@@ -180,6 +181,25 @@ export default function decorate(block) {
   // Append the button to the block
   var storedAccessToken = sessionStorage.getItem("ACCESS_TOKEN");
   console.log("storedAccessToken from button: " + storedAccessToken);
-  if (storedAccessToken === null || storedAccessToken === "undefined")
+  //if (storedAccessToken === null || storedAccessToken === "undefined") {
     block.append(button);
+  //}
+  //else 
+  {
+    const ul = document.createElement('ul');
+    [...block.children].forEach((row) => {
+      const li = document.createElement('li');
+      while (row.firstElementChild) li.append(row.firstElementChild);
+      [...li.children].forEach((div) => {
+        div.className = row.firstElementChild.innerText;
+        console.log("text :: "+ row.firstElementChild.innerText);
+      });
+      ul.append(li);
+    });
+    // ul.querySelectorAll('img').forEach((img) => img.closest('picture').replaceWith(createOptimizedPicture(img.src, img.alt, false, [{ width: '750' }])));
+    block.textContent = '';
+    block.append(ul);
+  
+  }
+
 }

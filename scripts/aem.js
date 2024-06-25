@@ -222,6 +222,8 @@ function init() {
       localStorage.setItem('ACCESS_TOKEN_TIMESTAMP', new Date().getTime().toString());
       localStorage.setItem('USER_ID', data.user_id);
       localStorage.setItem('ACCOUNT_ID', data.account_id);
+      localStorage.setItem('ACCESS_TOKEN', data.access_token);
+      sessionStorage.setItem('ACCESS_TOKEN', data.access_token);
       return data.access_token;
     } catch (error) {
       document.cookie = 'access_token=; Max-Age=0; path=/; secure; SameSite=Lax';
@@ -247,12 +249,13 @@ function init() {
     window.ALM.ALMConfig = window.ALM.ALMConfig || {};
     const config = await fetchConfig();
     window.ALM.ALMConfig = config.data[0];
-    
+    window.ALM.storage = window.localStorage;
+    // window.ALM.almBaseURL = window.ALM.ALMConfig["ALM_URL"];
     const primeBaseURL = window.ALM.ALMConfig["ALM_URL"];
     let primeApiURL = "";
     primeApiURL = `${primeBaseURL}/primeapi/v2/`;
     window.ALM.ALMConfig["primeApiURL"] = primeApiURL;
-
+    window.ALM.ALMConfig.almBaseURL = window.ALM.ALMConfig["ALM_URL"];
     window.ALM.ALMConfig.accessToken = accessToken;
     window.ALM.ALMConfig.usageType = "aem-es";    
     window.ALM.getALMConfig = function() {
@@ -298,12 +301,38 @@ function init() {
         throw e;
       }
     }
+
+    const getAccountActiveFields = async () => {
+      const primeApiURL = window.ALM.getALMConfig().primeApiURL;
+      const accountActiveFieldsUrl = primeApiURL + "account/fields";
+      const headers = {
+        Accept: "application/vnd.api+json",
+        Authorization: `oauth ${accessToken}`,
+      };
+      try {
+        const response = await fetch(accountActiveFieldsUrl, {
+          credentials: "include",
+          headers,
+          method: "GET",
+        });
+        if (response) {
+          const activeFields = await response.json();
+          console.log(activeFields);
+          return activeFields;
+        }
+      } catch (e) {
+        throw e;
+      }
+    };
+
+    window.ALM.getAccountActiveFields = getAccountActiveFields;
     window.ALM.getALMUser = getALMUser;
     const getAccessToken = () => {
       return accessToken;
     };
+    
     window.ALM.getAccessToken = getAccessToken;
-    window.ALM.ALMConfig["frontendResourcesPath"] = "/etc.clientlibs//learning/clientlibs/clientlib-alm/resources";
+    window.ALM.ALMConfig["frontendResourcesPath"] = "/etc.clientlibs/learning/clientlibs/clientlib-alm/resources";
     window.ALM.ALMConfig.mountingPoints = {
 			catalogContainer: ".catalog__container",
 			trainingOverviewPage: ".training__page__container",
@@ -321,23 +350,94 @@ function init() {
 			categoryBrowserContainer: ".categoryBrowser__container",
 			footerContainer: ".footer__container"
 		};
-    window.ALM.storage = window.localStorage;
     console.log("ALM Config", window.ALM.ALMConfig);
+    let trainingOverviewPath = "/trainingOverview.html";
+    window.ALM.ALMConfig["trainingOverviewPath"] = trainingOverviewPath;
+    const getALMConfig = () => {
+      return window.ALM.ALMConfig;
+    };
+
+    //https://cpcontentsdev.adobe.com/public/alm-teams/index_4c83f4413cd5cb89e6fd282cb00c7367_stage1.html?accessToken=d996eb641e8b614391c2fb7ca13e85f5&hostName=learningmanagerstage1.adobe.com#/trainingOverview.html/trainingId/course:11307889
+    //http://localhost:3000/trainingOverview.html/trainingId/course:10228125/trainingInstanceId/course:10228125_13224763
+    //Handling Navigation to other pages
+    
+    const resetQueryParams = () => {
+      const newurl =
+        window.location.protocol +
+        "//" +
+        window.location.host +
+        window.location.pathname +
+        addMandatoryParams();
+      window.history.replaceState({ path: newurl }, "", newurl);
+    };
+
+    const addMandatoryParams = () => {
+      return (
+        "?" + "ACCESS_TOKEN" + "=" + accessToken + "&" + "HOST_NAME" + "=" + primeBaseURL
+      );
+    };
+    const navigateToTrainingOverviewPage = (
+      trainingId,
+      trainingInstanceId = "",
+      queryParams = ""
+      ) => {
+        let { trainingOverviewPath } = getALMConfig();
+          
+        trainingOverviewPath = getUrl(trainingOverviewPath, {
+          trainingId: trainingId,
+        });
+        trainingOverviewPath = trainingInstanceId
+          ? '?accessToken='+ accessToken +'&hostName=learningmanagerstage1.adobe.com#' + getUrl(trainingOverviewPath, { trainingInstanceId: trainingInstanceId })
+          : trainingOverviewPath;
+          console.log("trainingOverviewPath" + trainingOverviewPath);
+        // window.location = queryParams
+        //   ? trainingOverviewPath + "&" + queryParams
+        //   : trainingOverviewPath;
+
+
+          // trainingOverviewPath?accessToken=470495f7aad9f5b6c726be77b79b9b92&hostName=learningmanagerstage1.adobe.com#/trainingOverview.html/trainingId/course:9788521/trainingInstanceId/course:9788521
+
+          console.log("http://localhost:3000/navtopages/training-overview" + '?accessToken='+ accessToken +'&hostName=learningmanagerstage1.adobe.com#' + getUrl(trainingOverviewPath, { trainingInstanceId: trainingInstanceId }));
+
+          window.location = "http://localhost:3000/navtopages/training-overview" /* + '?accessToken='+ accessToken +'&hostName=learningmanagerstage1.adobe.com#' */ + getUrl(trainingOverviewPath, { trainingInstanceId: trainingInstanceId });
+          // const newUrl = "http://localhost:3000/navtopages/training-overview";
+
+        
+        let trainingDiv = document.createElement('div');
+        
+        document.body.appendChild(trainingDiv);
+        loadReactDOM();
+    };
+  
+    const getUrl = (urlStr, params) => {
+      for (const param in params) {
+        urlStr = `${urlStr}/${param}/${params[param]}`;
+      }
+      return urlStr;
+    };
+
+    window.ALM.navigateToTrainingOverviewPage = navigateToTrainingOverviewPage;
   }
 
-  const setPlaceHolder = () => {
-    const catalogDiv = document.createElement('div');
-    catalogDiv.className = "catalog__container";
-    // document.body.appendChild(catalogDiv);
-    document.getElementsByClassName("button-container").item(0).appendChild(catalogDiv);
-  }
+  // const setPlaceHolder = () => {
+  //   const catalogDiv = document.createElement('div');
+  //   catalogDiv.className = "catalog__container";
+  //   document.body.appendChild(catalogDiv);
+
+  //   const catalogDiv1 = document.createElement('div');
+  //   catalogDiv.className = "catalog__container";
+  //   document.body.appendChild(catalogDiv1);
+  // }
 
   const loadReactDOM = () => {
     const script = document.createElement('script');
     script.async = false;
     script.src = '../myscripts/learning/clientlibs/clientlib-alm/js/main.3560700d.js';
     document.head.appendChild(script);
-    loadCSS('../styles/main.c4334d51.css');
+    // loadCSS('../styles/main.c4334d51.css');
+    // ../myscripts/learning/clientlibs/clientlib-alm/
+    loadCSS('../myscripts/learning/clientlibs/clientlib-alm/css/main.c4334d51.css');
+
   }
 
   window.addEventListener('load', async () => {
@@ -359,18 +459,12 @@ function init() {
 
     const queryParams = getQueryParams();
     const code = queryParams['code'];
+    const accesstoken1 = queryParams['accessToken'];
     console.log(code);
+    console.log("Access Token retrieved from URL after navigation: ", accesstoken1);
+    sessionStorage.setItem('ACCESSTOKEN1', accesstoken1);
 
-    // add api calls
-
-    var storedAccessToken = sessionStorage.getItem("ACCESS_TOKEN");
-    console.log("storedAccessToken: " + storedAccessToken);
-
-    if (storedAccessToken !== null && storedAccessToken !== "undefined") {
-      await setALMConfig(accessToken);
-      setPlaceHolder();
-      loadReactDOM();
-    } else if (code) {
+    if (code) {
       try {
           refreshToken =  await getRefreshTokenFromCode(code);
           console.log("Refresh Token:", refreshToken);
@@ -381,13 +475,27 @@ function init() {
         accessToken = await getAccessTokenFromRefreshToken(refreshToken);
         console.log("Access Token:", accessToken);
         await setALMConfig(accessToken);
-        sessionStorage.setItem("ACCESS_TOKEN", accessToken);
-        setPlaceHolder();
+        //setPlaceHolder();
         loadReactDOM();
       } catch (error) {
         console.error('Error getting access token from refreshtoken:', error);
       }
     }
+    else if (accesstoken1) {
+      function redirectToNewPage() {
+        const currentUrl = window.location.href;
+      console.log("currentUrl" + currentUrl);
+        // if (currentUrl.includes("learningmanagerstage1.adobe.com#/trainingOverview.html/trainingId")) {
+        //   const newUrl = "http://localhost:3000/navtopages/training-overview";
+        //   window.location.href = newUrl;
+        // }
+      }
+      redirectToNewPage();
+      await setALMConfig(accesstoken1);
+      loadReactDOM();
+    }
+
+
   });
 
   window.addEventListener('unhandledrejection', (event) => {
