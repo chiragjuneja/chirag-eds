@@ -457,6 +457,23 @@ function init() {
       return params;
     }
 
+    function replaceCodeWithAccessToken(atValue) {
+      let currentUrl = window.location.href;
+      let baseUrl = currentUrl.split('?')[0];
+      let queryParams = getQueryParams(currentUrl);
+  
+      if (queryParams.code) {
+          queryParams.accessToken = atValue;
+          delete queryParams.code;
+      }
+  
+      // Construct the new URL
+      let newQueryString = Object.keys(queryParams).map(key => `${key}=${queryParams[key]}`).join('&');
+      let newUrl = `${baseUrl}?${newQueryString}`;
+  
+      return newUrl;
+  }
+
     const queryParams = getQueryParams();
     const code = queryParams['code'];
     const accesstoken1 = queryParams['accessToken'];
@@ -474,6 +491,9 @@ function init() {
       try {
         accessToken = await getAccessTokenFromRefreshToken(refreshToken);
         console.log("Access Token:", accessToken);
+        var newURL = replaceCodeWithAccessToken(accessToken);
+        console.log("new url:", accessToken);
+        window.location.href = newURL;
         await setALMConfig(accessToken);
         //setPlaceHolder();
         loadReactDOM();
@@ -484,13 +504,17 @@ function init() {
     else if (accesstoken1) {
       function redirectToNewPage() {
         const currentUrl = window.location.href;
-      console.log("currentUrl" + currentUrl);
+        console.log("currentUrl" + currentUrl);
         // if (currentUrl.includes("learningmanagerstage1.adobe.com#/trainingOverview.html/trainingId")) {
         //   const newUrl = "http://localhost:3000/navtopages/training-overview";
         //   window.location.href = newUrl;
         // }
       }
-      redirectToNewPage();
+      if (window.location.pathname === '/') {
+        console.log("just load dom");
+      } else {
+        redirectToNewPage();
+      }
       await setALMConfig(accesstoken1);
       loadReactDOM();
     }

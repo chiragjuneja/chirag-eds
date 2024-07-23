@@ -2,10 +2,11 @@ export default function decorate(block) {
     var storedAccessToken = sessionStorage.getItem("ACCESS_TOKEN");
     [...block.children].forEach((row) => {
       
-      if (storedAccessToken === null || storedAccessToken === "undefined") {
+      if (!(storedAccessToken === null || storedAccessToken === "undefined")) {
         // Determine the type of content in the row
         const contentType = row.textContent.trim().toLowerCase();
-  
+        row.style.display = 'none';
+        
         // Create and append the appropriate container based on the content type
         let containerDiv;
         switch (contentType) {
